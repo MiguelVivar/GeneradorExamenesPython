@@ -9,7 +9,9 @@ con preguntas y alternativas en orden aleatorio.
 
 import os
 import sys
+import tkinter as tk
 from view.gui import ExamenGeneratorGUI
+from view.splash_screen import SplashScreen
 
 def main():
     """
@@ -18,8 +20,21 @@ def main():
     # Crear directorio para exámenes si no existe
     if not os.path.exists('Examenes'):
         os.makedirs('Examenes')
-        
-    # Iniciar la interfaz gráfica
+    
+    # Crear una ventana raíz temporal para mostrar el splash screen
+    root = tk.Tk()
+    root.withdraw()  # Ocultar ventana raíz temporal
+    
+    # Mostrar pantalla de carga
+    splash = SplashScreen(root)
+    
+    # Esperar a que se cierre la pantalla de carga
+    root.wait_window(splash)
+    
+    # Cerrar ventana raíz temporal
+    root.destroy()
+    
+    # Iniciar la interfaz gráfica principal
     app = ExamenGeneratorGUI()
     app.mainloop()
 

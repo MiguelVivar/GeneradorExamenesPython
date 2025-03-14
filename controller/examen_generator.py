@@ -31,6 +31,28 @@ class ExamenGenerator:
         if not os.path.exists(self.directorio_examenes):
             os.makedirs(self.directorio_examenes)
     
+    def generar_examen(self, numero_tema):
+        """
+        Genera una versión de examen en formato PDF
+        
+        Args:
+            numero_tema (int): Número del tema a generar (1, 2, 3, ...)
+            
+        Returns:
+            str: Ruta del archivo PDF generado
+        """
+        # Generar letra del tema (A, B, C, ...)
+        letra_tema = chr(64 + numero_tema)  # 65 es el código ASCII de 'A'
+        nombre_archivo = os.path.join(self.directorio_examenes, f"Examen_Tema_{letra_tema}.pdf")
+        
+        # Generar examen aleatorio
+        preguntas_examen = self.pregunta_dao.generar_examen_aleatorio()
+        
+        # Crear PDF
+        if self.generar_pdf(preguntas_examen, nombre_archivo, f"Tema {letra_tema}"):
+            return nombre_archivo
+        return None
+    
     def generar_examenes(self, cantidad_temas):
         """
         Genera múltiples versiones de exámenes en formato PDF
@@ -44,16 +66,9 @@ class ExamenGenerator:
         rutas_archivos = []
         
         for i in range(cantidad_temas):
-            # Generar letra del tema (A, B, C, ...)
-            letra_tema = chr(65 + i)  # 65 es el código ASCII de 'A'
-            nombre_archivo = os.path.join(self.directorio_examenes, f"Examen_Tema_{letra_tema}.pdf")
-            
-            # Generar examen aleatorio
-            preguntas_examen = self.pregunta_dao.generar_examen_aleatorio()
-            
-            # Crear PDF
-            if self.generar_pdf(preguntas_examen, nombre_archivo, f"Tema {letra_tema}"):
-                rutas_archivos.append(nombre_archivo)
+            ruta_archivo = self.generar_examen(i+1)
+            if ruta_archivo:
+                rutas_archivos.append(ruta_archivo)
         
         return rutas_archivos
     
