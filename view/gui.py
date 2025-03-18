@@ -147,65 +147,90 @@ class ExamenGeneratorGUI(tk.Tk):
         vcmd = (self.register(validate_input), '%P')
         self.temas_spinner.configure(validate='key', validatecommand=vcmd)
         
-        # Botones con efectos hover
+        # Botones con efectos hover y estilo mejorado
         button_frame = tk.Frame(content_frame, bg='#fcf3ea')
         button_frame.pack(pady=30)
         
-        self.generar_pdf_button = tk.Button(
-            button_frame,
-            text="GENERAR EXÁMENES PDF",
-            command=self._generar_examenes_pdf,
-            font=("Arial", 16, "bold"),
-            fg="white",
-            bg="#FF0000",
-            activebackground="#CC0000",
-            activeforeground="white",
-            width=20,
-            height=1,
-            cursor="hand2",
-            relief='flat'
-        )
-        self.generar_pdf_button.pack(pady=10)
+        # Función para crear botones con estilo mejorado
+        def create_styled_button(parent, text, command, button_type='default', icon=None):
+            # Crear un frame contenedor para el botón con efecto de sombra
+            btn_container = tk.Frame(parent, bg='#d9d9d9', bd=0)
+            btn_container.pack(pady=12)
+            
+            # Configurar colores según el tipo de botón
+            if button_type == 'word':
+                bg_color = "#0078D7"  # Azul para Word
+                active_bg_color = "#0063B1"  # Azul más oscuro para hover
+            else:
+                bg_color = "#FF0000"  # Rojo por defecto
+                active_bg_color = "#CC0000"  # Rojo más oscuro para hover
+            
+            # Crear el botón dentro del contenedor
+            btn = tk.Button(
+                btn_container,
+                text=text,
+                command=command,
+                font=("Arial", 16, "bold"),
+                fg="white",
+                bg=bg_color,
+                activebackground=active_bg_color,
+                activeforeground="white",
+                width=25,  # Aumentado de 20 a 25 para mostrar texto completo
+                height=1,
+                cursor="hand2",
+                relief='flat',
+                bd=0,
+                padx=15,
+                pady=8,
+                highlightthickness=0
+            )
+            btn.pack(padx=1, pady=1)
+            
+            # Efecto de elevación al pasar el mouse
+            def on_enter(e):
+                btn.configure(bg=active_bg_color)
+                btn_container.configure(bg="#999999")
+                
+            def on_leave(e):
+                btn.configure(bg=bg_color)
+                btn_container.configure(bg="#d9d9d9")
+                
+            def on_press(e):
+                btn_container.configure(bg="#666666")
+                
+            def on_release(e):
+                btn_container.configure(bg="#999999")
+                
+            btn.bind('<Enter>', on_enter)
+            btn.bind('<Leave>', on_leave)
+            btn.bind('<ButtonPress-1>', on_press)
+            btn.bind('<ButtonRelease-1>', on_release)
+            
+            return btn
         
-        self.generar_word_button = tk.Button(
-            button_frame,
-            text="GENERAR EXÁMENES WORD",
-            command=self._generar_examenes_word,
-            font=("Arial", 16, "bold"),
-            fg="white",
-            bg="#FF0000",
-            activebackground="#CC0000",
-            activeforeground="white",
-            width=20,
-            height=1,
-            cursor="hand2",
-            relief='flat'
+        # Crear botones con el nuevo estilo
+        self.generar_pdf_button = create_styled_button(
+            button_frame, 
+            "GENERAR EXÁMENES PDF", 
+            self._generar_examenes_pdf,
+            'default'
         )
-        self.generar_word_button.pack(pady=10)
         
-        self.ver_button = tk.Button(
-            button_frame,
-            text="VER EXÁMENES",
-            command=self._ver_examenes,
-            font=("Arial", 16, "bold"),
-            fg="white",
-            bg="#FF0000",
-            activebackground="#CC0000",
-            activeforeground="white",
-            width=20,
-            height=1,
-            cursor="hand2",
-            relief='flat'
+        self.generar_word_button = create_styled_button(
+            button_frame, 
+            "GENERAR EXÁMENES WORD", 
+            self._generar_examenes_word,
+            'word'
         )
-        self.ver_button.pack(pady=10)
         
-        # Efectos de hover
-        self.generar_pdf_button.bind('<Enter>', lambda e: self.generar_pdf_button.configure(bg="#CC0000"))
-        self.generar_pdf_button.bind('<Leave>', lambda e: self.generar_pdf_button.configure(bg="#FF0000"))
-        self.generar_word_button.bind('<Enter>', lambda e: self.generar_word_button.configure(bg="#CC0000"))
-        self.generar_word_button.bind('<Leave>', lambda e: self.generar_word_button.configure(bg="#FF0000"))
-        self.ver_button.bind('<Enter>', lambda e: self.ver_button.configure(bg="#CC0000"))
-        self.ver_button.bind('<Leave>', lambda e: self.ver_button.configure(bg="#FF0000"))
+        self.ver_button = create_styled_button(
+            button_frame, 
+            "VER EXÁMENES", 
+            self._ver_examenes,
+            'default'
+        )
+        
+        # Los efectos de hover ya están implementados en la función create_styled_button
         
         # Panel derecho para hero image
         right_panel = tk.Frame(card_frame, bg='#fcf3ea')
