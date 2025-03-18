@@ -151,10 +151,10 @@ class ExamenGeneratorGUI(tk.Tk):
         button_frame = tk.Frame(content_frame, bg='#fcf3ea')
         button_frame.pack(pady=30)
         
-        self.generar_button = tk.Button(
+        self.generar_pdf_button = tk.Button(
             button_frame,
-            text="GENERAR EXÁMENES",
-            command=self._generar_examenes,
+            text="GENERAR EXÁMENES PDF",
+            command=self._generar_examenes_pdf,
             font=("Arial", 16, "bold"),
             fg="white",
             bg="#FF0000",
@@ -165,7 +165,23 @@ class ExamenGeneratorGUI(tk.Tk):
             cursor="hand2",
             relief='flat'
         )
-        self.generar_button.pack(pady=10)
+        self.generar_pdf_button.pack(pady=10)
+        
+        self.generar_word_button = tk.Button(
+            button_frame,
+            text="GENERAR EXÁMENES WORD",
+            command=self._generar_examenes_word,
+            font=("Arial", 16, "bold"),
+            fg="white",
+            bg="#FF0000",
+            activebackground="#CC0000",
+            activeforeground="white",
+            width=20,
+            height=1,
+            cursor="hand2",
+            relief='flat'
+        )
+        self.generar_word_button.pack(pady=10)
         
         self.ver_button = tk.Button(
             button_frame,
@@ -184,8 +200,10 @@ class ExamenGeneratorGUI(tk.Tk):
         self.ver_button.pack(pady=10)
         
         # Efectos de hover
-        self.generar_button.bind('<Enter>', lambda e: self.generar_button.configure(bg="#CC0000"))
-        self.generar_button.bind('<Leave>', lambda e: self.generar_button.configure(bg="#FF0000"))
+        self.generar_pdf_button.bind('<Enter>', lambda e: self.generar_pdf_button.configure(bg="#CC0000"))
+        self.generar_pdf_button.bind('<Leave>', lambda e: self.generar_pdf_button.configure(bg="#FF0000"))
+        self.generar_word_button.bind('<Enter>', lambda e: self.generar_word_button.configure(bg="#CC0000"))
+        self.generar_word_button.bind('<Leave>', lambda e: self.generar_word_button.configure(bg="#FF0000"))
         self.ver_button.bind('<Enter>', lambda e: self.ver_button.configure(bg="#CC0000"))
         self.ver_button.bind('<Leave>', lambda e: self.ver_button.configure(bg="#FF0000"))
         
@@ -356,20 +374,21 @@ class ExamenGeneratorGUI(tk.Tk):
         if hasattr(self, 'loading_window') and self.loading_window.winfo_exists():
             self.loading_window.destroy()
     
-    def _generar_examenes(self):
+    def _generar_examenes_pdf(self):
         """
-        Genera los exámenes según la cantidad de temas especificada
+        Genera los exámenes en formato PDF según la cantidad de temas especificada
         """
         # Obtener la cantidad de temas
         cantidad_temas = self.temas_var.get()
         
         # Deshabilitar botones durante la generación
-        self.generar_button.config(state=tk.DISABLED)
+        self.generar_pdf_button.config(state=tk.DISABLED)
+        self.generar_word_button.config(state=tk.DISABLED)
         self.ver_button.config(state=tk.DISABLED)
         
         # Reiniciar barra de progreso
         self.progreso_var.set(0)
-        self.estado_var.set("Generando exámenes...")
+        self.estado_var.set("Generando exámenes en PDF...")
         
         # Mostrar pantalla de carga
         self._crear_pantalla_carga()
@@ -382,7 +401,7 @@ class ExamenGeneratorGUI(tk.Tk):
                 
                 # Actualizar mensaje inicial
                 self.after(0, lambda: self._actualizar_pantalla_carga(
-                    "Iniciando generación de exámenes...", 5, temas_completados))
+                    "Iniciando generación de exámenes en PDF...", 5, temas_completados))
                 
                 # Simular progreso de carga inicial (preparación)
                 for i in range(1, 6):
@@ -396,15 +415,76 @@ class ExamenGeneratorGUI(tk.Tk):
                     progreso = 20 + (i / cantidad_temas) * 80
                     temas_completados = i
                     self.after(0, lambda p=progreso, t=temas_completados, i=i+1: 
-                              self._actualizar_pantalla_carga(f"Generando tema {i}...", p, t))
+                              self._actualizar_pantalla_carga(f"Generando tema {i} en PDF...", p, t))
                     
-                    # Generar un tema
-                    ruta = self.examen_generator.generar_examen(i+1)
+                    # Generar un tema en PDF
+                    ruta = self.examen_generator.generar_examen_pdf(i+1)
                     rutas_archivos.append(ruta)
                 
                 # Actualizar progreso final
                 self.after(0, lambda: self._actualizar_pantalla_carga(
-                    "¡Exámenes generados correctamente!", 100, cantidad_temas))
+                    "¡Exámenes en PDF generados correctamente!", 100, cantidad_temas))
+                
+                # Pequeña pausa para mostrar el mensaje de finalización
+                self.after(1500, lambda: self._mostrar_resultado(rutas_archivos))
+                
+            except Exception as e:
+                # Mostrar error en el hilo principal
+                self.after(0, lambda: self._mostrar_error(str(e)))
+        
+        # Iniciar el hilo
+        threading.Thread(target=generar_en_hilo).start()
+        
+    def _generar_examenes_word(self):
+        """
+        Genera los exámenes en formato Word según la cantidad de temas especificada
+        """
+        # Obtener la cantidad de temas
+        cantidad_temas = self.temas_var.get()
+        
+        # Deshabilitar botones durante la generación
+        self.generar_pdf_button.config(state=tk.DISABLED)
+        self.generar_word_button.config(state=tk.DISABLED)
+        self.ver_button.config(state=tk.DISABLED)
+        
+        # Reiniciar barra de progreso
+        self.progreso_var.set(0)
+        self.estado_var.set("Generando exámenes en Word...")
+        
+        # Mostrar pantalla de carga
+        self._crear_pantalla_carga()
+        
+        # Crear un hilo para generar los exámenes sin bloquear la interfaz
+        def generar_en_hilo():
+            try:
+                # Generar exámenes con actualización de progreso
+                temas_completados = 0
+                
+                # Actualizar mensaje inicial
+                self.after(0, lambda: self._actualizar_pantalla_carga(
+                    "Iniciando generación de exámenes en Word...", 5, temas_completados))
+                
+                # Simular progreso de carga inicial (preparación)
+                for i in range(1, 6):
+                    self.after(i * 200, lambda p=i*4: self._actualizar_pantalla_carga(
+                        "Preparando datos...", p, temas_completados))
+                
+                # Generar exámenes
+                rutas_archivos = []
+                for i in range(cantidad_temas):
+                    # Actualizar progreso
+                    progreso = 20 + (i / cantidad_temas) * 80
+                    temas_completados = i
+                    self.after(0, lambda p=progreso, t=temas_completados, i=i+1: 
+                              self._actualizar_pantalla_carga(f"Generando tema {i} en Word...", p, t))
+                    
+                    # Generar un tema en Word
+                    ruta = self.examen_generator.generar_examen_word(i+1)
+                    rutas_archivos.append(ruta)
+                
+                # Actualizar progreso final
+                self.after(0, lambda: self._actualizar_pantalla_carga(
+                    "¡Exámenes en Word generados correctamente!", 100, cantidad_temas))
                 
                 # Pequeña pausa para mostrar el mensaje de finalización
                 self.after(1500, lambda: self._mostrar_resultado(rutas_archivos))
@@ -431,7 +511,8 @@ class ExamenGeneratorGUI(tk.Tk):
         self.estado_var.set("Exámenes generados correctamente")
         
         # Habilitar botones
-        self.generar_button.config(state=tk.NORMAL)
+        self.generar_pdf_button.config(state=tk.NORMAL)
+        self.generar_word_button.config(state=tk.NORMAL)
         self.ver_button.config(state=tk.NORMAL)
         
         # Mostrar mensaje de éxito
@@ -454,7 +535,8 @@ class ExamenGeneratorGUI(tk.Tk):
         self.estado_var.set("Error al generar exámenes")
         
         # Habilitar botones
-        self.generar_button.config(state=tk.NORMAL)
+        self.generar_pdf_button.config(state=tk.NORMAL)
+        self.generar_word_button.config(state=tk.NORMAL)
         self.ver_button.config(state=tk.NORMAL)
         
         # Mostrar mensaje de error
