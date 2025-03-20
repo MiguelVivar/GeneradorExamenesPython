@@ -23,7 +23,7 @@ class SplashScreen(tk.Toplevel):
         
         # Configurar la ventana de carga
         self.title("Iniciando Generador de Exámenes")
-        self.geometry("600x400")
+        self.geometry("620x400")
         self.resizable(False, False)
         self.overrideredirect(True)  # Quitar bordes de la ventana
         

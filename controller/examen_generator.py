@@ -11,7 +11,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Frame, PageTemplate, BaseDocTemplate, NextPageTemplate
 from reportlab.platypus.flowables import HRFlowable
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
@@ -120,7 +120,7 @@ class ExamenGenerator:
         """
         try:
             # Configurar el documento
-            doc = SimpleDocTemplate(
+            doc = BaseDocTemplate(
                 ruta_archivo,
                 pagesize=letter,
                 rightMargin=72,
@@ -152,13 +152,27 @@ class ExamenGenerator:
                 spaceAfter=3
             ))
             
+            # Crear dos columnas para las preguntas (a partir de la segunda página)
+            frame1 = Frame(doc.leftMargin, doc.bottomMargin, doc.width/2-6, doc.height, id='col1')
+            frame2 = Frame(doc.leftMargin+doc.width/2+6, doc.bottomMargin, doc.width/2-6, doc.height, id='col2')
+            two_columns_template = PageTemplate(id='TwoColumns', frames=[frame1, frame2])
+            
+            # Plantilla de página normal (para la primera página)
+            normal_template = PageTemplate(id='Normal', frames=[Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')])
+            
+            # Agregar plantillas al documento
+            doc.addPageTemplates([normal_template, two_columns_template])
+            
             # Contenido del documento
             contenido = []
             
-            # Agregar portada
+            # Agregar portada (primera página)
             self.agregar_portada(contenido, styles, titulo_examen)
             
-            # Agregar título
+            # Cambiar a la plantilla de dos columnas para las preguntas
+            contenido.append(NextPageTemplate('TwoColumns'))
+            
+            # Agregar título en la segunda página
             contenido.append(Paragraph(f"EXAMEN DE ADMISIÓN - {titulo_examen}", styles['TituloPrincipal']))
             contenido.append(Spacer(1, 12))
             
@@ -169,11 +183,33 @@ class ExamenGenerator:
             ))
             contenido.append(Spacer(1, 12))
             
-            # Agregar preguntas
-            for i, pregunta in enumerate(preguntas):
+            # Dividir preguntas en dos columnas
+            mitad = len(preguntas) // 2
+            preguntas_col1 = preguntas[:mitad]
+            preguntas_col2 = preguntas[mitad:]
+            
+            # Agregar preguntas a la primera columna
+            for i, pregunta in enumerate(preguntas_col1):
                 # Número y enunciado de la pregunta
                 contenido.append(Paragraph(
                     f"{i+1}. {pregunta.enunciado}",
+                    styles['Pregunta']
+                ))
+                
+                # Alternativas
+                contenido.append(Paragraph(f"a) {pregunta.alternativa_a}", styles['Alternativa']))
+                contenido.append(Paragraph(f"b) {pregunta.alternativa_b}", styles['Alternativa']))
+                contenido.append(Paragraph(f"c) {pregunta.alternativa_c}", styles['Alternativa']))
+                contenido.append(Paragraph(f"d) {pregunta.alternativa_d}", styles['Alternativa']))
+                contenido.append(Paragraph(f"e) {pregunta.alternativa_e}", styles['Alternativa']))
+                
+                contenido.append(Spacer(1, 12))
+            
+            # Agregar preguntas a la segunda columna
+            for i, pregunta in enumerate(preguntas_col2):
+                # Número y enunciado de la pregunta
+                contenido.append(Paragraph(
+                    f"{i+1 + mitad}. {pregunta.enunciado}",
                     styles['Pregunta']
                 ))
                 
@@ -193,6 +229,7 @@ class ExamenGenerator:
         except Exception as e:
             print(f"Error al generar el PDF: {e}")
             return False    
+    
     def agregar_portada(self, contenido, styles, titulo_examen):
         """
         Agrega una portada al documento PDF
@@ -328,7 +365,7 @@ class ExamenGenerator:
             # Agregar portada
             self._agregar_portada_word(doc, titulo_examen)
             
-            # Agregar título
+            # Agregar título en la segunda página
             titulo = doc.add_paragraph(f"EXAMEN DE ADMISIÓN - {titulo_examen}", 'TituloPrincipal')
             titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
             doc.add_paragraph()
@@ -349,19 +386,46 @@ class ExamenGenerator:
             instrucciones.style = styles['Italic']
             doc.add_paragraph()
             
-            # Agregar preguntas
-            for i, pregunta in enumerate(preguntas):
+            # Dividir preguntas en dos columnas
+            mitad = len(preguntas) // 2
+            preguntas_col1 = preguntas[:mitad]
+            preguntas_col2 = preguntas[mitad:]
+            
+            # Crear una tabla para las dos columnas
+            table = doc.add_table(rows=1, cols=2)
+            table.autofit = False
+            table.columns[0].width = Inches(3.5)
+            table.columns[1].width = Inches(3.5)
+            
+            # Agregar preguntas a la primera columna
+            cell = table.cell(0, 0)
+            for i, pregunta in enumerate(preguntas_col1):
                 # Número y enunciado de la pregunta
-                p = doc.add_paragraph(f"{i+1}. {pregunta.enunciado}", 'Pregunta')
+                p = cell.add_paragraph(f"{i+1}. {pregunta.enunciado}", 'Pregunta')
                 
                 # Alternativas
-                doc.add_paragraph(f"a) {pregunta.alternativa_a}", 'Alternativa')
-                doc.add_paragraph(f"b) {pregunta.alternativa_b}", 'Alternativa')
-                doc.add_paragraph(f"c) {pregunta.alternativa_c}", 'Alternativa')
-                doc.add_paragraph(f"d) {pregunta.alternativa_d}", 'Alternativa')
-                doc.add_paragraph(f"e) {pregunta.alternativa_e}", 'Alternativa')
+                cell.add_paragraph(f"a) {pregunta.alternativa_a}", 'Alternativa')
+                cell.add_paragraph(f"b) {pregunta.alternativa_b}", 'Alternativa')
+                cell.add_paragraph(f"c) {pregunta.alternativa_c}", 'Alternativa')
+                cell.add_paragraph(f"d) {pregunta.alternativa_d}", 'Alternativa')
+                cell.add_paragraph(f"e) {pregunta.alternativa_e}", 'Alternativa')
                 
-                doc.add_paragraph()
+                cell.add_paragraph()
+            
+            # Agregar preguntas a la segunda columna
+            cell = table.cell(0, 1)
+            for i, pregunta in enumerate(preguntas_col2):
+                # Número y enunciado de la pregunta
+                p = cell.add_paragraph(f"{i+1 + mitad}. {pregunta.enunciado}", 'Pregunta')
+                
+                # Alternativas
+                cell.add_paragraph(f"a) {pregunta.alternativa_a}", 'Alternativa')
+                cell.add_paragraph(f"b) {pregunta.alternativa_b}", 'Alternativa')
+                cell.add_paragraph(f"c) {pregunta.alternativa_c}", 'Alternativa')
+                cell.add_paragraph(f"d) {pregunta.alternativa_d}", 'Alternativa')
+                cell.add_paragraph(f"e) {pregunta.alternativa_e}", 'Alternativa')
+                
+                cell.add_paragraph()
             
             # Guardar el documento
             doc.save(ruta_archivo)
